@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" layout="1column" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="checkout.cart.totals">
+            <arguments>
+                <argument name="jsLayout" xsi:type="array">
+                    <item name="components" xsi:type="array">
+                        <item name="block-totals" xsi:type="array">
+                            <item name="children" xsi:type="array">
+                                <!-- Start of the main content -->
+                                <item name="duty_fee" xsi:type="array">
+                                    <!-- The path to js file-->
+                                    <item name="component" xsi:type="string">Digitalriver_DrPay/js/view/checkout/summary/duty_fee_value</item>
+                                    <item name="sortOrder" xsi:type="string">100</item>
+                                    <item name="config" xsi:type="array">
+                                        <!-- Show duty fee -->
+                                        <item name="discount" xsi:type="string" translate="true">Duty Fee</item>
+                                    </item>
+                                </item>
+                                <item name="iortax" xsi:type="array">
+                                    <!-- The path to js file-->
+                                    <item name="component" xsi:type="string">Digitalriver_DrPay/js/view/checkout/summary/ior_tax_value</item>
+                                    <item name="sortOrder" xsi:type="string">101</item>
+                                    <item name="config" xsi:type="array">
+                                        <!-- Show ior tax -->
+                                        <item name="ior_tax" xsi:type="string" translate="true">IOR Tax</item>
+                                    </item>
+                                </item>
+                                <!--  End-->
+                            </item>
+                        </item>
+                    </item>
+                </argument>
+            </arguments>
+        </referenceBlock>
+    </body>
+</page>

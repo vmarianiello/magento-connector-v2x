@@ -1,0 +1,429 @@
+<style>
+    #drop-in .DR-Legal-Footer {
+        display: none;
+    }
+</style>
+<script type="text/javascript">
+    /* events */
+    require(['jquery', 'jquery/ui', 'loader', 'domReady!'], function ($) {
+        drComplianceFooter = {};
+        drComplianceFooterContent = '';
+        isGuest = true;
+        if (window.checkoutConfig.quoteData.customer_id == null) {
+            isGuest = false
+        }
+        paymentSessionId = '';
+        jQuery(document).on('ready', function () {
+            if (isGuest == true) {
+                jQuery('.is_auth').hide()
+            }
+            var drLegalFooter = jQuery('body').find('.DR-Legal-Footer').html();
+            jQuery('.checkout.placeorder').attr('disabled', 'disabled');
+            if (jQuery('input#DR-termsAccept').is(':checked')) {
+                jQuery('.checkout.placeorder').removeAttr('disabled');
+            }
+            jQuery('body').find('#drop-in #DR-Legal-Footer').hide();
+            jQuery('body').find('#DR-dropInTerms').show();
+        });
+        jQuery(document).on('click', '#DR-loadSavedPayment', function (e) {
+            e.preventDefault();
+            loadSavedPayment();
+        });
+        // accept terms checkbox control
+        jQuery('body').on('click', 'input#DR-termsAccept', function () {
+            if (jQuery('input#DR-termsAccept').is(':checked')) {
+                jQuery('#DR-placeOrder').removeAttr('disabled');
+            } else if (!jQuery('input#DR-termsAccept').is(':checked')) {
+                jQuery('#DR-placeOrder').attr('disabled', 'disabled');
+            }
+        });
+        jQuery(document).on('click', '.shipping-information button.action-edit,.opc-progress-bar-item:first()',
+            function () {
+                displayDrForm();
+            });
+        jQuery(document).on('click', '.shipping-information button.action-edit', function () {
+            displayDrForm();
+        });
+        jQuery(document).on('click', '.DR-card', function () {
+            //	capture click inside dropin
+        });
+        jQuery(document).on('click', '.checkout.placeorder', function () {
+            jQuery('body').trigger('processStart');
+            jQuery('.checkout.placeorder').attr('disabled', 'disabled');
+        });
+        jQuery(document).ready(function () {
+            window.history.pushState(null, '', window.location.href);
+            window.onpopstate = function () {
+                window.history.pushState(null, '', window.location.href);
+            };
+        });
+    });
+
+    function savedCardLoader() {
+        jQuery('.saved_cards_outer').hide();
+        //Fetch the saved cards in DR
+        jQuery.ajax({
+            type: 'GET',
+            url: BASE_URL + 'drpay/payment/getsavedsources',
+            showLoader: true, //use for display loader
+            success: function (response) {
+                if (response.success) {
+                    if (response.content) {
+                        payOptions = response.content;
+                        for (var key in payOptions) {
+                            if (payOptions.hasOwnProperty(key)) {
+                                var tmpHtml = "";
+                                var val = payOptions[key];
+                                var skey = payOptions[key]['sourceClientSecret'];
+                                tmpHtml = '<div><input ' +
+                                    'class="drpay-saved-payments" ' +
+                                    'type="radio" ' +
+                                    'data-skey="' + skey + '" ' +
+                                    'name="selected_card" ' +
+                                    'value="' + key + '" ' +
+                                    'onclick="hideForm()"/>' + val.content + '</div>';
+                                jQuery(".saved_cards_inner").append(tmpHtml);
+                            }
+                        }
+                        if (jQuery('input[name="selected_card"]').length > 0) {
+                            hideForm();
+                            jQuery('input[name="selected_card"]:first').prop('checked', true);
+                            jQuery('.saved_cards_outer').show();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function loadSavedPayment() {
+        var selectedPayID = '';
+        var sKeyID = '';
+        jQuery('.drpay-saved-payments').each(function () {
+            if (jQuery(this).is(':checked')) {
+                selectedPayID = jQuery(this).val();
+                sKeyID = jQuery(this).attr('data-skey');
+            }
+        });
+        window.checkoutConfig.payment.drpay_dropin.redirect_url = BASE_URL + 'drpay/payment/success';
+        let digitalriverpayments = new DigitalRiver(window.checkoutConfig.payment.drpay_dropin.public_key, {
+            "locale": window.checkoutConfig.payment.drpay_dropin.mage_locale
+        });
+        digitalriverpayments.authenticateSource({
+            "sessionId": paymentSessionId,
+            "sourceId": selectedPayID,
+            "sourceClientSecret": sKeyID,
+            "returnUrl": window.checkoutConfig.payment.drpay_dropin.redirect_url
+        }).then(function (data) {
+            jQuery.ajax({
+                type: 'POST',
+                url: BASE_URL + 'drpay/payment/savedrsource',
+                data: {
+                    'sourceId': selectedPayID,
+                    'readyForStorage': false
+                },
+                showLoader: true,
+                success: function (response) {
+                    if (response.success) {
+                        jQuery('#dropin-message').html('');
+                        hideDrForm();
+                    } else {
+                        //Show Error Message
+                        jQuery('#dropin-message').html(response.content);
+                        displayDrForm();
+                    }
+                },
+                complete: function () {
+                    showCheckbox();
+                }
+            });
+        });
+    }
+
+    function hideForm() {
+        jQuery("#drpay_dropin-content .payment-method-instruction").hide();
+        jQuery("#drpay_dropin-content #drpay-dropin-form .payment-form-inner").hide();
+    }
+
+    function showForm() {
+        jQuery("#drpay_dropin-content .payment-method-instruction").show();
+        jQuery("#drpay_dropin-content #drpay-dropin-form .payment-form-inner").show();
+    }
+
+    function showCheckbox() {
+        jQuery('.checkout.placeorder').attr('disabled', 'disabled');
+        jQuery('#DR-dropInAccept').show().css({
+            'clear': 'both',
+            'margin-top': '23px',
+            'width': '100%',
+            'padding-left': '23px',
+            'float': 'right'
+        });
+    }
+
+    function loadDropIn() {
+        require(['Magento_Checkout/js/model/quote'], function (quote) {
+            if (quote.getQuoteId()) {
+                jQuery('#DR-dropInAccept').hide();
+                jQuery('.shipping-step').remove();
+                jQuery.ajax({
+                    type: 'GET',
+                    showLoader: true, //use for display loader
+                    url: BASE_URL + 'drpay/payment/savedrquote',
+                    success: function (response) {
+                        if(response.success) {
+                            showLoader: true;
+                            paymentSessionId = response.content.paymentSessionId;
+                            var sellingEntity = response.content.sellingEntity;
+                            var displaySavePayment = response.content.savePayment;
+                            window.checkoutConfig.payment.drpay_dropin.default_selling_entity = sellingEntity;
+                            var billingAddress = quote.billingAddress();
+                            if(billingAddress){
+
+                                let digitalriverpayments = new DigitalRiver(window.checkoutConfig.payment.drpay_dropin.public_key, {
+                                    "locale": window.checkoutConfig.payment.drpay_dropin.mage_locale
+                                });
+
+                                let local = JSON.parse(localStorage['mage-cache-storage']);
+                                let newBilling;
+
+                                if (!jQuery('#billing-address-same-as-shipping-drpay_dropin').prop('checked')) {
+                                    if(local['checkout-data'])
+                                    {
+                                        newBilling = local['checkout-data'].billingAddressFromData;
+                                    }
+                                }
+                                billingAddress = (newBilling) ? newBilling : billingAddress;
+
+                                let regionCode;
+                                if(billingAddress.region_id){
+                                    let urlDrQuoteBilling = window.BASE_URL+'/drpay/quotebilling/index';
+                                    jQuery.ajax({
+                                        url: urlDrQuoteBilling,
+                                        type: 'POST',
+                                        data: { 'region_id' : billingAddress.region_id } ,
+                                        complete: function(response){
+                                            let drQuoteRegion = response.responseJSON;
+                                            regionCode = drQuoteRegion[0].region_code;
+                                            setConfigurations(paymentSessionId,billingAddress, digitalriverpayments,displaySavePayment, regionCode);
+                                        },
+                                        error: function (xhr, status, errorThrown) {
+                                            console.log("api error");
+                                        }
+                                    });
+                                }
+                                else {
+                                    setConfigurations(paymentSessionId,billingAddress, digitalriverpayments, displaySavePayment, '');
+                                }
+                            }
+                        } else {
+                            console.log(response);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function setConfigurations(paymentSessionId, billingAddress, digitalriverpayments, displaySavePayment, regionCode){
+        var customerEmail = '';
+        if(window.checkoutConfig.isCustomerLoggedIn){
+            customerEmail = window.checkoutConfig.quoteData.customer_email;
+        }else{
+            if(jQuery("#customer-email").length){
+                customerEmail = jQuery("#customer-email").val();
+            }
+        }
+        const configuration = {
+            sessionId: paymentSessionId,
+            billingAddress: {
+                firstName: billingAddress.firstname,
+                lastName: billingAddress.lastname,
+                email: customerEmail,
+                phoneNumber: billingAddress.telephone,
+                address: {
+                    line1: billingAddress.street[0],
+                    line2: (billingAddress.street[1]) ? billingAddress.street[1] : '',
+                    city: billingAddress.city,
+                    state: (billingAddress.regionCode) ? billingAddress.regionCode: regionCode,
+                    postalCode: billingAddress.postcode,
+                    country: (billingAddress.countryId) ? billingAddress.countryId : billingAddress.country_id
+                }
+            },
+            paymentMethodConfiguration: {
+                creditCard: {
+                    style: {
+                        base: {
+                            color: "#333",
+                            fontFamily: "Arial, Helvetica, sans-serif",
+                            fontSize: "16px"
+                        }
+                    }
+                }
+            },
+            onReady: function(data) {
+                jQuery('body').find('.payment-option.discount-code').show();
+                jQuery('body').find('.payment-option.giftcardaccount').show();
+            },
+            onSuccess: function(data) {
+                //send to back end for processing
+                jQuery('#dropin-message').html('');
+                jQuery('body').find('.payment-option.discount-code').hide();
+                jQuery('body').find('.payment-option.giftcardaccount').hide();
+                window.checkoutConfig.payment.drpay_dropin.redirect_url = BASE_URL + 'drpay/payment/success';
+                var id = data.source.id;
+                jQuery.ajax({
+                    type: 'POST',
+                    url: BASE_URL + 'drpay/payment/savedrsource',
+                    data: {
+                        "sourceId": data.source.id,
+                        "readyForStorage": data.readyForStorage
+                    },
+                    //showLoader: true, //use for display loader
+                    success: function(response) {
+                        if (response.success) {
+                            jQuery('#dropin-message').html('');
+                            hideDrForm();
+                        }else{
+                            //Show Error Message
+                            jQuery('#dropin-message').html(response.content);
+                            displayDrForm();
+                        }
+                    },
+                    complete: function() {
+                        showCheckbox();
+                    }
+                });
+            },
+            onError: function(data) {
+                jQuery('#dropin-message').html(data.errors[0].message);
+            },
+            onCancel: function(data) {
+                displayDrForm();
+            }
+        }
+        if(displaySavePayment) {
+            configuration['options'] = {
+                showSavePaymentAgreement: true
+            };
+        }
+        if(!configuration.billingAddress.address.state){
+            configuration.billingAddress.address.state = regionCode;
+        }
+        let dropin = digitalriverpayments.createDropin(configuration);
+
+        if(jQuery('#drop-in').children().length > 0) {
+            jQuery('#drop-in').children()[0].remove();
+        }
+        dropin.mount('drop-in');
+        jQuery('#drpay_dropin-content .DR-Legal-Footer').hide();
+        jQuery('#checkout #DR-dropInTerms.shipping-step').remove();
+        loadDrFooter();
+    }
+
+    function loadDrFooter() {
+        require(['Magento_Checkout/js/model/quote'], function (quote) {
+            if (quote.getQuoteId()) {
+                let digitalriverpayments = new DigitalRiver(window.checkoutConfig.payment.drpay_dropin.public_key, {
+                    "locale": window.checkoutConfig.payment.drpay_dropin.mage_locale
+                });
+                var complianceOptions = {
+                    classes: {
+                        base: 'DRElement'
+                    },
+                    compliance: {
+                        locale: window.checkoutConfig.payment.drpay_dropin.mage_locale,
+                        entity: window.checkoutConfig.payment.drpay_dropin.default_selling_entity
+                    }
+                }
+                var compliance = digitalriverpayments.createElement('compliance', complianceOptions);
+                compliance.mount('compliance');
+                drCompliance = digitalriverpayments.Compliance.getDetails(
+                    window.checkoutConfig.payment.drpay_dropin.default_selling_entity,
+                    window.checkoutConfig.payment.drpay_dropin.mage_locale
+                );
+                drComplianceDisclosures = drCompliance['disclosure'];
+                if (jQuery(drComplianceDisclosures['confirmDisclosure']).length) {
+                    jQuery('#confirmDisclosure').html(drComplianceDisclosures['confirmDisclosure']['localizedText']);
+                }
+                jQuery('#DR-dropInTerms').appendTo('#checkout');
+                jQuery('#DR-dropInTerms').css('clear', 'both').show();
+            }
+        });
+    }
+
+    function displayDrForm() {
+        jQuery('#drop-in').show();
+        jQuery('#DR-dropInAccept').hide();
+        jQuery('#drpay_dropin-content .DR-Legal-Footer').hide();
+        jQuery('.payment-methods .payment-group .step-title').css('display', 'block');
+        jQuery('.payment-methods .payment-group .payment-method .payment-method-title').css('display', 'block');
+        jQuery('.payment-methods .payment-group .payment-method .details').css('display', 'inline-block');
+        jQuery('.payment-methods .payment-group .payment-method .payment-logos').css('display', 'inline-block');
+        jQuery('.payment-methods .payment-group .payment-method .payment-icon').css('display', 'inline-block');
+        jQuery('.payment-methods .payment-group .payment-method .saved_cards_outer').css('display', 'block');
+        jQuery('#drpay-dropin-form').css('display', 'block');
+        jQuery('#payment-data').css('display', 'none');
+        jQuery('#payment-data').removeClass('payment-active');
+        if (jQuery('input[name="selected_card"]:checked').val() == '' ||
+            jQuery('input[name="selected_card"]').length <= 0) {
+            jQuery('.payment-methods .payment-group .payment-method .payment-method-instruction').
+            css('display', 'block');
+        }
+        if (jQuery('input[name="selected_card"]').length <= 0) {
+            jQuery(".payment-methods .payment-group .payment-method .saved_cards_outer").css("display", "none");
+        }
+        jQuery(".payment-methods .payment-group .payment-method .payment-method-content .checkout").
+        css("display", "block");
+        jQuery(".payment-methods .payment-group .payment-method .checkout").css("display", "block");
+        jQuery('.checkout-tabs .nav-pills li').removeClass('active');
+        jQuery('.checkout-tabs .nav-pills li:nth-child(1)').addClass('active');
+        jQuery('.step-content').css('background', 'none');
+        jQuery('.payment-method-content').css('margin-bottom', '10px');
+        jQuery(".payment-methods .payment-group .payment-method .checkout").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method #drpay-dropin-form .checkout").css("display", "block");
+        if (window.checkoutConfig.quoteData.is_virtual) {
+            //jQuery(".billing-address-details .action-edit-address").css("display","block");
+        } else {
+            //jQuery(".billing-address-details .action-edit-address").css("display","block");
+            //jQuery(".payment-method-billing-address .billing-address-same-as-shipping-block").css("display","block");
+        }
+    }
+
+    function hideDrForm(creditCardDetails) {
+        if (creditCardDetails) {
+        }
+        //var edit = '<?= $block->escapeJs($block->escapeHtml(__('Edit')));?>';
+        //var info = '<?= $block->escapeJs($block->escapeHtml(__('ending in')));?>';
+        var title = "<div class='title'>" +
+            jQuery(".payment-methods .payment-group .payment-method._active .payment-method-title .label span").html() +
+            "</div>";
+        //var cartinfo = "<div class='card-info'>"+ creditCardDetails.brand + ' ' + info + ' '+ creditCardDetails.lastFourDigits+"</div>";
+        //var editlink = "<a class='payment-edit' href = 'javascript:void(0)' id='payment-edit' onclick='displayDrForm()'>"+edit+"</a>";
+        jQuery("#drop-in").hide();
+        jQuery("#payment-data").html(title);
+        jQuery("#payment-data").css("display", "block");
+        jQuery("#payment-data").addClass('payment-active');
+        jQuery(".payment-methods .payment-group .step-title").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .payment-method-title").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .details").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .payment-logos").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .payment-icon").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .payment-method-instruction").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .saved_cards_outer").css("display", "none");
+        if(jQuery(".action-cancel").is(":visible")){
+            jQuery(".action-cancel").click();
+        }
+        jQuery("#drpay-dropin-form").css("display", "none");
+        jQuery(".payment-methods .payment-group .payment-method .checkout").css("display", "block");
+        jQuery('.checkout-tabs .nav-pills li').removeClass('active');
+        jQuery('.checkout-tabs .nav-pills li:nth-child(2)').addClass('active');
+        jQuery('.step-content').css('background', '#e6e6e6');
+        if (window.checkoutConfig.quoteData.is_virtual) {
+            jQuery(".billing-address-details .action-edit-address").css("display", "none");
+        } else {
+            jQuery(".billing-address-details .action-edit-address").css("display", "none");
+            jQuery(".payment-method-billing-address .billing-address-same-as-shipping-block").css("display", "none");
+        }
+    }
+</script>
