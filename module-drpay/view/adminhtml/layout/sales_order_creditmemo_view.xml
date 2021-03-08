@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @category Digitalriver
+ * @package  Digitalriver_DrPay
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="content">
+            <referenceBlock name="form">
+                <block class="Digitalriver\DrPay\Block\Adminhtml\Order\Creditmemo\Totals" name="creditmemo_totals" template="Magento_Sales::order/totals.phtml">
+                    <block class="Magento\Sales\Block\Adminhtml\Order\Totals\Tax" name="tax" template="Digitalriver_DrPay::order/totals/tax.phtml"/>
+                </block>
+            </referenceBlock>
+        </referenceContainer>
+
+        <referenceBlock name="creditmemo_items">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Digitalriver_DrPay::order/creditmemo/view/items.phtml</argument>
+            </action>
+        </referenceBlock>
+        <referenceBlock name="creditmemo_items.default">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Digitalriver_DrPay::order/creditmemo/view/items/renderer/default.phtml</argument>
+            </action>
+        </referenceBlock>
+        <referenceBlock name="creditmemo_items.bundle">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Digitalriver_DrPay::order/creditmemo/view/items/bundle_renderer.phtml</argument>
+            </action>
+        </referenceBlock>
+    </body>
+</page>

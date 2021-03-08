@@ -1,0 +1,13 @@
+<?php
+// phpcs:disable Magento2.Templates.ThisInTemplate
+?>
+<script>
+    var BASE_URL = '<?= $block->escapeUrl($block->getBaseUrl()) ?>';
+    var require = {
+        "baseUrl": "<?= $block->escapeUrl($block->getViewFileUrl('/')) ?>"
+    };
+</script>
+<?php
+$js_url = $this->helper(Digitalriver\DrPay\Helper\Config::class)->getDropInJsUrl();
+?>
+<script type="text/javascript" src="<?= /** @noEscape */ $js_url ?>"></script>

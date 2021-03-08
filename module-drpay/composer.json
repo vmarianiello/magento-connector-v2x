@@ -1,0 +1,18 @@
+{
+    "name": "digitalriver/module-drpay",
+    "description": "Digitalriver DrPay module",
+    "type": "magento2-module",
+    "version": "2.1.1",
+    "license": [
+    ],
+    "require": {
+        "magento/framework": ">=102.0.4",
+        "magento/module-checkout": ">=100.3.4"
+    },
+    "autoload": {
+        "files": [ "registration.php" ],
+        "psr-4": {
+            "Digitalriver\\DrPay\\": ""
+        }
+    }
+}

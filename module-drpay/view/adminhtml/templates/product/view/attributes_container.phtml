@@ -1,0 +1,20 @@
+<?php
+/**
+ * Add JS file to implement selects' options' values
+ *
+ * @category   Digitalriver
+ * @package    Digitalriver_DrPay
+ */
+?>
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Digitalriver_DrPay/js/updatecountryselect": {
+                "countryData": <?= /** @noEscape */ json_encode($block->getCountryDetails()); ?>
+            },
+            "Digitalriver_DrPay/js/updateattributes": {
+                "eccnData": <?= /** @noEscape */ json_encode($block->getEccnDetails()); ?>
+            }
+        }
+    }
+</script>

@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @category   Digitalriver
+ * @package    Digitalriver_DrPay
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Digitalriver\DrPay\Api\DrConnectorRepositoryInterface" type="Digitalriver\DrPay\Model\DrConnectorRepository" />
+    <type name="Magento\SalesRule\Model\Quote\Address\Total\ShippingDiscount">
+        <plugin name="create_dr_quote" type="Digitalriver\DrPay\Plugin\SalesRule\Model\Quote\Address\Total\ShippingDiscount"/>
+    </type>
+    <preference for="Magento\Customer\Model\AccountManagement" type="Digitalriver\DrPay\Model\Customer\AccountManagement"/>
+    <preference for="Magento\Framework\HTTP\Client\Curl" type="Digitalriver\DrPay\Framework\HTTP\Client\Curl"/>
+    <type name="Magento\Sales\Model\Order\Shipment">
+        <plugin name="salesOrderShipmentRegister" type="Digitalriver\DrPay\Plugin\Sales\Order\ShipmentPlugin" sortOrder="1"/>
+    </type>
+    <type name="Magento\Sales\Model\Order\Item">
+        <plugin name="salesOrderItemCancel" type="Digitalriver\DrPay\Plugin\Sales\Order\ItemPlugin" sortOrder="1"/>
+    </type>
+    <type name="Digitalriver\DrPay\Logger\Handler">
+        <arguments>
+            <argument name="filesystem" xsi:type="object">Magento\Framework\Filesystem\Driver\File</argument>
+        </arguments>
+    </type>
+    <type name="Digitalriver\DrPay\Logger\Logger">
+        <arguments>
+            <argument name="name" xsi:type="string">DrLogger</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">Digitalriver\DrPay\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </type>
+    <virtualType name="Magento\Sales\Model\ResourceModel\Order\Grid" type="Magento\Sales\Model\ResourceModel\Grid">
+        <arguments>
+            <argument name="columns" xsi:type="array">
+                <item name="dr_order_id" xsi:type="string">sales_order.dr_order_id</item>
+                <item name="dr_payment_method" xsi:type="string">sales_order.dr_payment_method</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <preference for="Digitalriver\DrPay\Api\Data\CatalogSyncInterface" type="Digitalriver\DrPay\Model\CatalogSync"/>
+    <preference for="Digitalriver\DrPay\Api\CatalogSyncRepositoryInterface" type="Digitalriver\DrPay\Model\CatalogSyncRepository"/>
+    <virtualType name="Digitalriver\DrPay\Model\ResourceModel\CatalogSync\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">dr_catalog_sync_queue</argument>
+            <argument name="resourceModel" xsi:type="string">Digitalriver\DrPay\Model\ResourceModel\CatalogSync\Collection</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="catalog_sync_sync_listing_data_source" xsi:type="string">Digitalriver\DrPay\Model\ResourceModel\CatalogSync\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+    <virtualType name="CatalogSyncFilterPool" type="Magento\Framework\View\Element\UiComponent\DataProvider\FilterPool">
+        <arguments>
+            <argument name="appliers" xsi:type="array">
+                <item name="regular" xsi:type="object">Magento\Framework\View\Element\UiComponent\DataProvider\RegularFilter</item>
+                <item name="fulltext" xsi:type="object">Magento\Framework\View\Element\UiComponent\DataProvider\FulltextFilter</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="CatalogSyncProvider" type="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider">
+        <arguments>
+            <argument name="collection" xsi:type="object" shared="false">Digitalriver\DrPay\Model\ResourceModel\CatalogSync\Collection</argument>
+            <argument name="filterPool" xsi:type="object" shared="false">CatalogSyncFilterPool</argument>
+        </arguments>
+    </virtualType>
+<!--    Plugin for validating HS Code during Import-->
+    <type name="Magento\CatalogImportExport\Model\Import\Product\Validator">
+        <plugin name="validateHsCode" type="Digitalriver\DrPay\Plugin\CatalogImportExport\Import\Product\ValidatorPlugin"/>
+    </type>
+
+    <!-- Include Duty Fee and IOR Tax on credit memo calculation -->
+    <type name="Magento\Sales\Model\Order\Creditmemo\Total\Grand">
+        <plugin name="addDutyFeeToTotal" type="Digitalriver\DrPay\Plugin\Sales\Order\Creditmemo\Total\GrandPlugin"/>
+    </type>
+    <!-- Display Duty Fee and IOR Tax on Credit memo update totals -->
+    <preference for="Magento\Sales\Model\Order\CreditmemoFactory"
+                type="Digitalriver\DrPay\Model\Order\CreditmemoFactory"/>
+    <!-- Display Duty Fee and IOR Tax on Order API Call -->
+    <type name="Magento\Sales\Api\OrderRepositoryInterface">
+        <plugin name="display_order_duty_ior_tax_order_api"
+                type="Digitalriver\DrPay\Plugin\OrderRepository"/>
+    </type>
+    <!-- Include Duty Fee and IOR Tax on Invoice calculation -->
+    <type name="Magento\Sales\Model\Order\Invoice\Total\Shipping">
+        <plugin name="addDutyFeeToInvoiceTotal" type="Digitalriver\DrPay\Plugin\Sales\Order\Invoice\Total\ShippingPlugin"/>
+    </type>
+</config>
